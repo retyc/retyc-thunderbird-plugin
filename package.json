@@ -1,6 +1,6 @@
 {
   "name": "retyc-thunderbird-plugin",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Thunderbird extension for Retyc — secure, end-to-end encrypted file transfers",
   "author": "TripleStack SAS",
