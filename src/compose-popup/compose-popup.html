@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Retyc</title>
+</head>
+<body>
+  <div class="container">
+    <div id="state-loading" class="state">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="state-ready" class="state hidden">
+      <div class="status-row">
+        <span id="status-label" class="status-label"></span>
+        <label class="switch" title="Enable or disable Retyc interception">
+          <input type="checkbox" id="enabled-toggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <p id="status-detail" class="status-detail"></p>
+      <button id="btn-settings" class="btn btn-link">Open settings</button>
+    </div>
+
+    <div id="state-unauth" class="state hidden">
+      <p class="info warn">You are not logged in to Retyc.<br>Attachments will be sent normally.</p>
+      <button id="btn-open-popup" class="btn btn-primary">Open settings to log in</button>
+    </div>
+  </div>
+</body>
+</html>

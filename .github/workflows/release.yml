@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  package:
+    name: Package .xpi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check tag matches manifest version
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          MANIFEST_VERSION=$(node -p "require('./manifest.json').version")
+          TAG_VERSION="${TAG#v}"
+          if [ "$TAG_VERSION" != "$MANIFEST_VERSION" ]; then
+            echo "❌ Tag '$TAG' does not match manifest version '$MANIFEST_VERSION'"
+            echo "   Update manifest.json and package.json to '$TAG_VERSION' before releasing."
+            exit 1
+          fi
+          echo "✅ Tag '$TAG' matches manifest version '$MANIFEST_VERSION'"
+
+      - name: Build (production)
+        run: npm run build
+
+      - name: Package .xpi
+        run: npm run package:xpi
+
+      - name: Upload .xpi to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.xpi

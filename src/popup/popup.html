@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retyc</title>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="../assets/icons/icon-48.png" alt="Retyc" class="logo" />
+      <h1>Retyc</h1>
+    </header>
+
+    <div id="status-section">
+      <div id="loading" class="state">
+        <div class="spinner"></div>
+        <p>Loading…</p>
+      </div>
+
+      <div id="authenticated" class="state hidden">
+        <div class="status-badge success">
+          <span class="dot"></span>Connected
+        </div>
+
+        <div class="user-card">
+          <div class="user-info">
+            <span id="user-fullname" class="user-fullname"></span>
+            <span id="user-email" class="user-email"></span>
+            <span id="token-expires" class="token-expires"></span>
+          </div>
+          <button id="btn-refresh" class="btn-icon-round" title="Refresh token">↻</button>
+        </div>
+
+        <p class="hint">Retyc is active. Attachments will be intercepted automatically when you send emails.</p>
+        <button id="btn-logout" class="btn btn-secondary">Log out</button>
+      </div>
+
+      <div id="unauthenticated" class="state hidden">
+        <div class="status-badge error">
+          <span class="dot"></span>Not connected
+        </div>
+        <p class="hint">Log in to enable automatic secure file transfers.</p>
+        <button id="btn-login" class="btn btn-primary">Log in with Retyc</button>
+      </div>
+
+      <div id="device-flow" class="state hidden">
+        <p class="hint">Open this URL in your browser and enter the code below:</p>
+        <a id="verification-url" href="#" target="_blank" class="verification-link"></a>
+        <div class="code-box">
+          <span id="user-code" class="user-code"></span>
+        </div>
+        <p class="hint small">Waiting for authentication…</p>
+        <div class="spinner"></div>
+        <button id="btn-cancel-login" class="btn btn-secondary">Cancel</button>
+      </div>
+
+      <div id="error-box" class="error-box hidden">
+        <span id="error-msg"></span>
+      </div>
+    </div>
+
+    <footer>
+      <button id="btn-settings" class="btn btn-link">Settings</button>
+    </footer>
+  </div>
+</body>
+</html>

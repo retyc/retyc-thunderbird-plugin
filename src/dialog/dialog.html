@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retyc – Upload Attachments</title>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="../assets/icons/icon-48.png" alt="Retyc" class="logo" />
+      <div>
+        <h1>Upload to Retyc?</h1>
+        <p class="subtitle">End-to-end encrypted file transfer</p>
+      </div>
+    </header>
+
+    <!-- Loading state -->
+    <div id="state-loading" class="state">
+      <div class="spinner"></div>
+      <p>Loading attachment details…</p>
+    </div>
+
+    <!-- Confirm state -->
+    <div id="state-confirm" class="state hidden">
+      <p class="description">
+        The following attachments will be uploaded to Retyc and removed from the email.
+        A secure download link will be added to your message.
+      </p>
+
+      <div class="info-block">
+        <div class="info-row">
+          <span class="label">Recipients</span>
+          <span id="recipients" class="value"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">Files</span>
+          <ul id="file-list" class="file-list"></ul>
+        </div>
+      </div>
+
+      <div class="passphrase-block">
+        <label class="passphrase-label" for="passphrase-input">
+          Passphrase
+          <span class="passphrase-hint">(required for recipients without a Retyc account)</span>
+        </label>
+        <div class="passphrase-row">
+          <input
+            type="password"
+            id="passphrase-input"
+            class="passphrase-input"
+            placeholder="Enter a passphrase…"
+            autocomplete="off"
+          />
+          <button type="button" id="btn-toggle-pass" class="btn-icon" title="Show/hide passphrase">👁</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btn-cancel" class="btn btn-secondary">Keep attachments</button>
+        <button id="btn-confirm" class="btn btn-primary">Upload &amp; Send</button>
+        <!-- label updated by dialog.ts depending on autoSend setting -->
+      </div>
+    </div>
+
+    <!-- Uploading state -->
+    <div id="state-uploading" class="state hidden">
+      <div class="spinner"></div>
+      <p id="upload-status">Uploading files to Retyc…</p>
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+      </div>
+      <p class="hint">Please wait. Do not close this window.</p>
+    </div>
+
+    <!-- Success state -->
+    <div id="state-done" class="state hidden">
+      <div class="success-icon">✓</div>
+      <p>Files uploaded successfully!</p>
+      <p class="hint">The download link has been added to your message. Sending now…</p>
+    </div>
+
+    <!-- Error state -->
+    <div id="state-error" class="state hidden">
+      <div class="error-icon">✕</div>
+      <p class="error-title">Upload failed</p>
+      <p id="error-message" class="error-detail"></p>
+      <div class="actions">
+        <button id="btn-close-error" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+
+    <!-- Session expired state -->
+    <div id="state-reauth" class="state hidden">
+      <div class="reauth-icon">🔑</div>
+      <p class="error-title">Session expired</p>
+      <p class="error-detail">Your Retyc session has expired. Please log in again to send files securely.</p>
+      <p class="error-detail" style="margin-top:6px;font-size:12px;color:#9ca3af">Your email and attachments are still in the compose window.</p>
+      <div class="actions">
+        <button id="btn-open-settings" class="btn btn-primary">Open Settings to log in</button>
+        <button id="btn-close-reauth" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

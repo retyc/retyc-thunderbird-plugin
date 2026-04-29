@@ -1,0 +1,12 @@
+export const DEFAULT_API_URL = 'https://api.retyc.com'
+export const DEFAULT_APP_URL = 'https://retyc.com'
+export const TRANSFER_PATH_PREFIX = '/transfer'
+export const DEFAULT_EXPIRES_DAYS = 7
+export const STORAGE_KEY_TOKENS = 'retyc_tokens'
+export const STORAGE_KEY_API_URL = 'retyc_api_url'
+export const STORAGE_KEY_APP_URL = 'retyc_app_url'
+export const STORAGE_KEY_EXPIRES_DAYS = 'retyc_expires_days'
+export const STORAGE_KEY_AUTO_SEND = 'retyc_auto_send'
+export const DEFAULT_AUTO_SEND = true
+export const STORAGE_KEY_ENABLED = 'retyc_enabled'
+export const DEFAULT_ENABLED = true

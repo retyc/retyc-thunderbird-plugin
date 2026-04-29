@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retyc – Settings</title>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="../assets/icons/icon-48.png" alt="Retyc" class="logo" />
+      <div>
+        <h1>Retyc Settings</h1>
+        <p class="subtitle">Secure file transfer for Thunderbird</p>
+      </div>
+    </header>
+
+    <form id="settings-form" novalidate>
+      <section>
+        <h2>Authentication</h2>
+
+        <div id="auth-authenticated" class="auth-block hidden">
+          <div class="status-badge success"><span class="dot"></span>Connected to Retyc</div>
+          <button type="button" id="btn-logout" class="btn btn-secondary">Log out</button>
+        </div>
+
+        <div id="auth-unauthenticated" class="auth-block hidden">
+          <div class="status-badge error"><span class="dot"></span>Not connected</div>
+          <button type="button" id="btn-login" class="btn btn-primary">Log in with Retyc</button>
+        </div>
+
+        <div id="auth-device-flow" class="auth-block hidden">
+          <p class="hint">Open this URL in your browser and enter the code:</p>
+          <a id="verification-url" href="#" target="_blank" class="verification-link"></a>
+          <div class="code-box">
+            <span id="user-code" class="user-code"></span>
+          </div>
+          <p class="hint">Waiting for authentication… <span class="spinner-inline"></span></p>
+          <button type="button" id="btn-cancel-login" class="btn btn-secondary">Cancel</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>API &amp; App</h2>
+
+        <label class="field">
+          <span class="field-label">API URL</span>
+          <input
+            type="url"
+            id="api-url"
+            name="apiUrl"
+            placeholder="https://api.retyc.com"
+            required
+          />
+          <span class="field-hint">The Retyc API base URL.</span>
+        </label>
+
+        <label class="field">
+          <span class="field-label">App URL</span>
+          <input
+            type="url"
+            id="app-url"
+            name="appUrl"
+            placeholder="https://retyc.com"
+            required
+          />
+          <span class="field-hint">Used to build the transfer link added to emails (e.g. https://retyc.com/transfer/…).</span>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Transfer expiry (days)</span>
+          <input
+            type="number"
+            id="expires-days"
+            name="expiresDays"
+            min="1"
+            max="365"
+            placeholder="7"
+            required
+          />
+          <span class="field-hint">How many days before the Retyc transfer expires (0 = no expiration is not allowed here).</span>
+        </label>
+      </section>
+
+      <section>
+        <h2>Behaviour</h2>
+
+        <label class="field field-inline">
+          <input type="checkbox" id="auto-send" name="autoSend" />
+          <span>
+            <span class="field-label">Send automatically after upload</span>
+            <span class="field-hint">When enabled, the email is sent immediately after files are uploaded to Retyc (1-step). Disable to review the message first before clicking Send manually (2-step).</span>
+          </span>
+        </label>
+      </section>
+
+      <div id="save-feedback" class="feedback hidden"></div>
+
+      <div class="form-actions">
+        <button type="submit" id="btn-save" class="btn btn-primary">Save settings</button>
+      </div>
+    </form>
+  </div>
+</body>
+</html>

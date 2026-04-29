@@ -1,0 +1,59 @@
+{
+  "name": "retyc-thunderbird-plugin",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Thunderbird extension for Retyc — secure, end-to-end encrypted file transfers",
+  "author": "TripleStack SAS",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/retyc/retyc-thunderbird-plugin.git"
+  },
+  "homepage": "https://retyc.com",
+  "bugs": {
+    "url": "https://github.com/retyc/retyc-thunderbird-plugin/issues"
+  },
+  "keywords": [
+    "thunderbird",
+    "retyc",
+    "file-transfer",
+    "encryption",
+    "e2e",
+    "mailextension"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "webpack --mode production",
+    "build:dev": "webpack --mode development",
+    "watch": "webpack --mode development --watch",
+    "lint": "eslint src --format=compact",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist artifacts",
+    "package": "npm run build && npm run package:xpi",
+    "package:xpi": "web-ext build --source-dir=. --artifacts-dir=artifacts --filename retyc-thunderbird-plugin-{version}.xpi --ignore-files=\"src/**\" --ignore-files=\"node_modules/**\" --ignore-files=\"webpack.config.js\" --ignore-files=\"eslint.config.*\" --ignore-files=\"tsconfig.json\" --ignore-files=\"package*.json\" --ignore-files=\".github/**\" --ignore-files=\".claude/**\" --ignore-files=\".idea/**\" --ignore-files=\"CLAUDE.md\""
+  },
+  "dependencies": {
+    "@retyc/sdk": "^1.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/firefox-webext-browser": "^143.0.0",
+    "buffer": "^6.0.3",
+    "css-loader": "^7.0.0",
+    "eslint": "^10.2.1",
+    "eslint-formatter-compact": "^9.0.1",
+    "html-webpack-plugin": "^5.6.0",
+    "mini-css-extract-plugin": "^2.9.0",
+    "path-browserify": "^1.0.1",
+    "process": "^0.11.10",
+    "stream-browserify": "^3.0.0",
+    "ts-loader": "^9.5.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.0",
+    "web-ext": "^10.1.0",
+    "webpack": "^5.95.0",
+    "webpack-cli": "^7.0.2"
+  }
+}
