@@ -151,7 +151,14 @@ On release, a `.xpi` package is built from the CI artifact and attached to the G
 
 ## Creating a release
 
-### 1. Build the package locally
+### 1. Bump the version
+
+Update the version in **both** files (they must match):
+
+- `package.json` → `"version": "X.Y.Z"`
+- `manifest.json` → `"version": "X.Y.Z"`
+
+### 2. Build the package locally
 
 ```bash
 npm run package
@@ -166,23 +173,7 @@ To test the packaged extension before releasing:
 npx web-ext run -t thunderbird --source-dir=.
 ```
 
-### 2. Bump the version
-
-Update the version in **both** files (they must match):
-
-- `package.json` → `"version": "X.Y.Z"`
-- `manifest.json` → `"version": "X.Y.Z"`
-
-### 3. Publish on addons.thunderbird.net (ATN)
-
-1. Go to [addons.thunderbird.net/developers](https://addons.thunderbird.net/en-US/developers/) and log in
-2. Submit the `.xpi` from `artifacts/`
-3. ATN reviews the extension and returns a **signed** `.xpi`
-4. The signed `.xpi` is what end users install
-
-> **Note:** Unlike Firefox/AMO, there is no CLI signing API for Thunderbird. `web-ext sign` targets AMO only — signing must be done via the ATN web interface.
-
-### 4. Create a GitHub release
+### 3. Create a GitHub release
 
 ```bash
 git tag vX.Y.Z
@@ -191,7 +182,26 @@ git push origin vX.Y.Z
 
 The CI `package` job triggers automatically on release tags and attaches the `.xpi` to the GitHub release.
 
-Alternatively, create the release manually on GitHub and upload the signed `.xpi` from ATN.
+Alternatively, create the release manually on GitHub and upload the `.xpi` from `artifacts/`.
+
+### 4. Publish on addons.thunderbird.net (ATN)
+
+1. Go to [addons.thunderbird.net/developers](https://addons.thunderbird.net/en-US/developers/) and log in
+2. Submit `artifacts/retyc-thunderbird-plugin-X.Y.Z.xpi`
+3. When prompted for source code, provide the URL of the corresponding GitHub release tag (e.g. `https://github.com/retyc/retyc-thunderbird-plugin/archive/refs/tags/vX.Y.Z.tar.gz`) and add the following build instructions in the reviewer notes:
+
+   ```
+   Node.js 18+ required.
+
+   npm ci
+   npm run build
+   ```
+
+   Output lands in `dist/`. The extension is `dist/` + `manifest.json` + `assets/`.
+
+ATN reviews the extension and returns a **signed** `.xpi`. The validator will flag Thunderbird-specific APIs (compose.onBeforeSend, etc.) as unsupported by Firefox — this is expected and non-blocking for ATN submissions.
+
+> **Note:** Unlike Firefox/AMO, there is no CLI signing API for Thunderbird. `web-ext sign` targets AMO only — signing must be done via the ATN web interface.
 
 ### Self-hosted distribution
 
