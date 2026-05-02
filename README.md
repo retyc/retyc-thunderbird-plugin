@@ -27,7 +27,7 @@
 - **End-to-end encryption** — files are encrypted client-side before upload using the Retyc SDK
 - **Passphrase support** — required when recipients don't have a Retyc account (minimum 8 characters)
 - **OIDC Device Flow auth** — log in with your Retyc account directly from Thunderbird
-- **Configurable** — API URL, app URL, and transfer expiry are all adjustable in settings
+- **Configurable** — transfer expiry and send mode are adjustable in settings
 - **Clean emails** — attachments are removed and replaced by a formatted download link in the message body
 
 ## Requirements
@@ -50,7 +50,7 @@ npm install
 npm run build:dev
 ```
 
-In Thunderbird: **Tools → Add-ons → Debug Add-ons → Load Temporary Add-on…** → select `manifest.json` at the project root.
+In Thunderbird: **Tools → Add-ons → Debug Add-ons → Load Temporary Add-on…** → select `dist/manifest.json`.
 
 ## Usage
 
@@ -77,15 +77,14 @@ Open **Settings** from the toolbar popup or via **Tools → Add-ons → Retyc �
 
 | Setting | Description | Default |
 |---|---|---|
-| API URL | Retyc backend API | `https://api.retyc.com` |
-| App URL | Used to build the download link in emails | `https://retyc.com` |
 | Transfer expiry | Days before the transfer expires | `7` |
+| Send automatically | Send immediately after upload (1-step) vs. review first (2-step) | enabled |
 
 ## Development
 
 ### Prerequisites
 
-- Node.js 18+ (CI matrix: 18, 20, 22)
+- Node.js 24+
 - The `@retyc/sdk` package is fetched from npm via `npm install` — no extra setup required
 
 ### Setup
@@ -97,6 +96,17 @@ npm run build       # production build
 npm run watch       # rebuild on file changes
 npm run typecheck   # TypeScript type-check only
 ```
+
+### Custom API URL
+
+The Retyc API URL is baked into the bundle at build time (default: `https://api.retyc.com`).
+To target a local backend, set `RETYC_API_URL` before building:
+
+```bash
+RETYC_API_URL=http://localhost:8000 npm run build:dev
+```
+
+The correct host permission is automatically written into `dist/manifest.json` by the webpack build.
 
 ### Project structure
 
@@ -170,7 +180,7 @@ npm run package
 To test the packaged extension before releasing:
 
 ```bash
-npx web-ext run -t thunderbird --source-dir=.
+npx web-ext run -t thunderbird --source-dir=dist
 ```
 
 ### 3. Create a GitHub release
@@ -191,13 +201,13 @@ Alternatively, create the release manually on GitHub and upload the `.xpi` from 
 3. When prompted for source code, provide the URL of the corresponding GitHub release tag (e.g. `https://github.com/retyc/retyc-thunderbird-plugin/archive/refs/tags/vX.Y.Z.tar.gz`) and add the following build instructions in the reviewer notes:
 
    ```
-   Node.js 18+ required.
+   Node.js 24+ required.
 
    npm ci
    npm run build
    ```
 
-   Output lands in `dist/`. The extension is `dist/` + `manifest.json` + `assets/`.
+   Output lands in `dist/`. The extension is fully self-contained in `dist/` (manifest, JS/CSS/HTML, and assets are all generated there by the build).
 
 ATN reviews the extension and returns a **signed** `.xpi`. The validator will flag Thunderbird-specific APIs (compose.onBeforeSend, etc.) as unsupported by Firefox — this is expected and non-blocking for ATN submissions.
 

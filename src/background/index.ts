@@ -1,12 +1,8 @@
-import { getSDK, getApiUrl, invalidateSDK } from './sdk-factory'
+import { getSDK, invalidateSDK } from './sdk-factory'
 import {
-  DEFAULT_APP_URL,
   DEFAULT_AUTO_SEND,
   DEFAULT_ENABLED,
   DEFAULT_EXPIRES_DAYS,
-  TRANSFER_PATH_PREFIX,
-  STORAGE_KEY_API_URL,
-  STORAGE_KEY_APP_URL,
   STORAGE_KEY_AUTO_SEND,
   STORAGE_KEY_ENABLED,
   STORAGE_KEY_EXPIRES_DAYS,
@@ -77,11 +73,6 @@ browser.tabs.onRemoved.addListener((tabId: number) => {
 
 // --- Helpers ---
 
-async function getAppUrl(): Promise<string> {
-  const result = await browser.storage.local.get(STORAGE_KEY_APP_URL)
-  return (result[STORAGE_KEY_APP_URL] as string | undefined) ?? DEFAULT_APP_URL
-}
-
 async function getExpiresDays(): Promise<number> {
   const result = await browser.storage.local.get(STORAGE_KEY_EXPIRES_DAYS)
   const raw: unknown = result[STORAGE_KEY_EXPIRES_DAYS]
@@ -98,21 +89,6 @@ async function getEnabled(): Promise<boolean> {
   const result = await browser.storage.local.get(STORAGE_KEY_ENABLED)
   const raw: unknown = result[STORAGE_KEY_ENABLED]
   return typeof raw === 'boolean' ? raw : DEFAULT_ENABLED
-}
-
-function buildTransferUrl(appUrl: string, slug: string): string {
-  // Defence in depth: even though slug is server-controlled, the API URL is user-configurable,
-  // so a malicious backend could attempt to return a slug that breaks out of the path.
-  const base = new URL(appUrl)
-  if (base.protocol !== 'https:' && base.protocol !== 'http:') {
-    throw new Error(`Invalid app URL protocol: ${base.protocol}`)
-  }
-  const path = `${TRANSFER_PATH_PREFIX}/${encodeURIComponent(slug)}`
-  const url = new URL(path, base)
-  if (url.protocol !== base.protocol || url.host !== base.host) {
-    throw new Error('Refusing to build a transfer URL outside of the configured app origin.')
-  }
-  return url.toString()
 }
 
 function broadcastToPopups(message: Message): void {
@@ -197,7 +173,7 @@ browser.compose.onBeforeSend.addListener(
 
     try {
       const win = await browser.windows.create({
-        url: browser.runtime.getURL(`dist/dialog.html?tabId=${tabId}`),
+        url: browser.runtime.getURL(`dialog.html?tabId=${tabId}`),
         type: 'popup',
         width: 520,
         height: 410,
@@ -248,7 +224,6 @@ async function performUpload(tabId: number, passphrase?: string): Promise<void> 
   const { signal } = pending.abort
 
   const sdk = await getSDK()
-  const appUrl = await getAppUrl()
   const expiresDays = await getExpiresDays()
   const expiresSeconds = expiresDays * 24 * 60 * 60
 
@@ -314,7 +289,15 @@ async function performUpload(tabId: number, passphrase?: string): Promise<void> 
   // Check after the (potentially long) SDK upload before touching the compose window.
   checkAbort(signal)
 
-  const transferUrl = buildTransferUrl(appUrl, result.slug)
+  const transferUrl = result.webUrl
+  if (!transferUrl) {
+    throw new Error('The Retyc API did not return a transfer URL. Please check your API version.')
+  }
+  // Guard against a compromised API returning a non-HTTP URL that would be injected into emails.
+  const transferUrlParsed = new URL(transferUrl)
+  if (transferUrlParsed.protocol !== 'https:' && transferUrlParsed.protocol !== 'http:') {
+    throw new Error(`Refusing to use transfer URL with unexpected protocol: ${transferUrlParsed.protocol}`)
+  }
 
   // Remove all original attachments from the compose window.
   for (const att of pending.attachments) {
@@ -392,14 +375,6 @@ async function appendRetycLink(
   }
 }
 
-function validateHttpUrl(url: string): string | null {
-  try {
-    const u = new URL(url)
-    return u.protocol === 'https:' || u.protocol === 'http:' ? url : null
-  } catch {
-    return null
-  }
-}
 
 function escapeHtml(str: string): string {
   return str
@@ -435,8 +410,6 @@ browser.runtime.onMessage.addListener(
 async function handleGetAuthStatus(): Promise<AuthStatusResponse> {
   let authenticated = false
   let tokenExpiresAt: number | undefined
-  const apiUrl = await getApiUrl()
-  const appUrl = await getAppUrl()
   const expiresDays = await getExpiresDays()
   const autoSend = await getAutoSend()
   const enabled = await getEnabled()
@@ -463,8 +436,6 @@ async function handleGetAuthStatus(): Promise<AuthStatusResponse> {
 
   return {
     authenticated,
-    apiUrl,
-    appUrl,
     expiresDays,
     autoSend,
     enabled,
@@ -527,20 +498,14 @@ async function handleLogout(): Promise<{ ok: boolean }> {
 
 async function handleGetSettings(): Promise<SettingsPayload> {
   return {
-    apiUrl: await getApiUrl(),
-    appUrl: await getAppUrl(),
     expiresDays: await getExpiresDays(),
     autoSend: await getAutoSend(),
   }
 }
 
 async function handleSaveSettings(payload: SettingsPayload): Promise<{ ok: boolean; error?: string }> {
-  if (!validateHttpUrl(payload.apiUrl)) return { ok: false, error: 'API URL must be a valid HTTP/HTTPS URL.' }
-  if (!validateHttpUrl(payload.appUrl)) return { ok: false, error: 'App URL must be a valid HTTP/HTTPS URL.' }
   try {
     await browser.storage.local.set({
-      [STORAGE_KEY_API_URL]: payload.apiUrl,
-      [STORAGE_KEY_APP_URL]: payload.appUrl,
       [STORAGE_KEY_EXPIRES_DAYS]: payload.expiresDays,
       [STORAGE_KEY_AUTO_SEND]: payload.autoSend,
     })

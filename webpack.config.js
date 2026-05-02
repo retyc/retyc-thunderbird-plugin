@@ -1,7 +1,54 @@
+const fs = require('fs')
 const path = require('path')
 const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+
+const RETYC_API_URL = process.env.RETYC_API_URL || 'https://api.retyc.com'
+
+// Generates dist/manifest.json with the correct host permission for the build-time API URL,
+// and strips the "dist/" prefix from internal paths (since web-ext uses --source-dir=dist).
+// Also copies assets/ into dist/assets/ so the packaged extension is self-contained.
+class ManifestPlugin {
+  apply(compiler) {
+    compiler.hooks.afterEmit.tapAsync('ManifestPlugin', (_compilation, callback) => {
+      try {
+        const src = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'manifest.json'), 'utf8'))
+
+        // Strip "dist/" prefix — web-ext will source from dist/, so paths must be relative to it.
+        const stripDist = (s) => s.replace(/^dist\//, '')
+        src.background.scripts = src.background.scripts.map(stripDist)
+        src.compose_action.default_popup = stripDist(src.compose_action.default_popup)
+        src.browser_action.default_popup = stripDist(src.browser_action.default_popup)
+        src.options_ui.page = stripDist(src.options_ui.page)
+
+        // Replace the default API host permission with the build-time URL.
+        const apiOrigin = new URL(RETYC_API_URL).origin + '/*'
+        src.permissions = src.permissions
+          .filter(p => !/^https?:\/\/api\.retyc\.com/.test(p))
+          .concat(apiOrigin)
+
+        // No optional_permissions needed — the API URL is fixed at build time.
+        delete src.optional_permissions
+
+        fs.writeFileSync(
+          path.resolve(__dirname, 'dist/manifest.json'),
+          JSON.stringify(src, null, 2),
+        )
+
+        // Copy assets/ into dist/ so web-ext --source-dir=dist finds them.
+        const assetsDir = path.resolve(__dirname, 'assets')
+        if (fs.existsSync(assetsDir)) {
+          fs.cpSync(assetsDir, path.resolve(__dirname, 'dist/assets'), { recursive: true })
+        }
+
+        callback()
+      } catch (err) {
+        callback(err)
+      }
+    })
+  }
+}
 
 /** @type {import('webpack').Configuration} */
 module.exports = (env, argv) => ({
@@ -54,6 +101,9 @@ module.exports = (env, argv) => ({
     ],
   },
   plugins: [
+    new webpack.DefinePlugin({
+      __RETYC_API_URL__: JSON.stringify(RETYC_API_URL),
+    }),
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],
       process: 'process/browser',
@@ -83,6 +133,7 @@ module.exports = (env, argv) => ({
       chunks: ['dialog'],
       inject: 'body',
     }),
+    new ManifestPlugin(),
   ],
   // Silence warnings for SDK Node.js shims
   ignoreWarnings: [
