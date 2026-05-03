@@ -8,6 +8,7 @@ export type MessageType =
   | 'SET_ENABLED'
   | 'GET_COMPOSE_INFO'
   | 'GET_UPLOAD_CAPABILITIES'
+  | 'GET_USER_QUOTA'
   | 'CONFIRM_UPLOAD'
   | 'CANCEL_UPLOAD'
   | 'UPLOAD_PROGRESS'
@@ -58,6 +59,13 @@ export interface UploadCapabilitiesResponse {
   // Both are nullable when the API does not advertise a limit.
   maxShareExpirationTime: number | null  // seconds
   maxShareSize: number | null            // bytes
+}
+
+export interface UserQuotaResponse {
+  usedStorage: number
+  maxStorage: number
+  countShare: number
+  maxCountShare: number | null
 }
 
 export interface ConfirmUploadPayload {

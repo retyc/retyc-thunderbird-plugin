@@ -44,6 +44,7 @@ section {
   flex-direction: column;
   gap: 16px;
 }
+section.hidden { display: none; }
 
 h2 {
   font-size: 15px;
@@ -165,6 +166,107 @@ input:focus { border-color: #1a3c6e; box-shadow: 0 0 0 2px rgba(26,60,110,0.12);
 .btn:active { opacity: 0.7; }
 .btn-primary { background: #1a3c6e; color: #fff; }
 .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+
+.account-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.account-fullname {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.account-email {
+  font-size: 13px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.account-expires {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.btn-icon-round {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #6b7280;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-icon-round:hover { background: #f3f4f6; color: #1a3c6e; }
+.btn-icon-round:disabled { opacity: 0.5; cursor: default; }
+
+.quota-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.quota-block.hidden { display: none; }
+.quota-row { display: flex; flex-direction: column; gap: 5px; }
+.quota-row.hidden { display: none; }
+.quota-row-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #6b7280;
+}
+.quota-label { font-weight: 500; }
+.quota-value { font-variant-numeric: tabular-nums; }
+
+.progress {
+  width: 100%;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #1a3c6e;
+  transition: width 0.25s ease;
+}
+.progress-fill.danger { background: #dc2626; }
+
+.signup-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #6b7280;
+}
+.signup-link {
+  color: #1a3c6e;
+  text-decoration: none;
+  font-weight: 500;
+}
+.signup-link:hover { text-decoration: underline; }
 
 .feedback {
   padding: 10px 14px;
