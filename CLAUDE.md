@@ -42,7 +42,8 @@ User clicks Send
             → cancel send + open dialog popup
                  → user confirms
                       → upload to Retyc (sequential reads, abortable)
-                      → broadcast UPLOAD_PROGRESS{finalizing:true} → indeterminate bar
+                      → SDK fires onProgress per chunk → broadcast
+                        UPLOAD_PROGRESS{phase:'uploading', uploadedBytes, totalBytes, ratio}
                       → remove attachments
                       → append link to body (URL validated against app origin)
                       → bypassTabs.add(tabId)

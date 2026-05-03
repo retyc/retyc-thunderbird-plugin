@@ -50,15 +50,15 @@ browser.runtime.onMessage.addListener((rawMsg: unknown) => {
     if (p.tabId !== tabId) return
     const fill = document.getElementById('progress-fill')!
     const status = document.getElementById('upload-status')!
-    if (p.finalizing) {
-      status.textContent = 'Encrypting and uploading to Retyc…'
-      fill.classList.add('indeterminate')
-      fill.style.width = '100%'
-    } else {
-      fill.classList.remove('indeterminate')
+    fill.classList.remove('indeterminate')
+    if (p.phase === 'reading') {
       status.textContent = `Reading "${p.fileName}" (${p.fileIndex + 1}/${p.totalFiles})…`
-      const pct = Math.round(((p.fileIndex + 1) / p.totalFiles) * 80)
-      fill.style.width = `${pct}%`
+      fill.style.width = '2%'
+    } else {
+      status.textContent =
+        `Uploading "${p.fileName}" (${p.fileIndex + 1}/${p.totalFiles}) — ` +
+        `${formatSize(p.uploadedBytes)} / ${formatSize(p.totalBytes)}`
+      fill.style.width = `${Math.round(p.ratio * 100)}%`
     }
   }
 

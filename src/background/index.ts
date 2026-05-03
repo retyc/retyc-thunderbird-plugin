@@ -235,7 +235,8 @@ async function performUpload(tabId: number, passphrase?: string): Promise<void> 
     )
   }
 
-  // Upload files sequentially to avoid holding all data in memory at once.
+  // Read attachments one at a time to spread out the file-decode work; the SDK still
+  // needs the full set in memory to encrypt, so peak usage scales with totalBytes.
   const uploadFiles = []
   for (let idx = 0; idx < pending.attachments.length; idx++) {
     checkAbort(signal)
@@ -246,9 +247,13 @@ async function performUpload(tabId: number, passphrase?: string): Promise<void> 
       type: 'UPLOAD_PROGRESS',
       payload: {
         tabId,
+        phase: 'reading',
         fileName: att.name,
         fileIndex: idx,
         totalFiles: pending.attachments.length,
+        uploadedBytes: 0,
+        totalBytes,
+        ratio: 0,
       } satisfies UploadProgressPayload,
     })
 
@@ -266,16 +271,22 @@ async function performUpload(tabId: number, passphrase?: string): Promise<void> 
 
   checkAbort(signal)
 
-  // Notify the dialog that all local file reads are done — the SDK upload may take
-  // a long time (encryption + network) without giving us per-file progress hooks.
+  // Switch the dialog out of the "reading" state immediately. The SDK can take a few
+  // seconds to negotiate keys / register files before its first onProgress fires;
+  // without this the UI stays stuck on "Reading lastFile (n/n)…".
+  const totalFiles = pending.attachments.length
+  const firstFileName = pending.attachments[0]?.name ?? ''
   broadcastToPopups({
     type: 'UPLOAD_PROGRESS',
     payload: {
       tabId,
-      fileName: '',
-      fileIndex: pending.attachments.length,
-      totalFiles: pending.attachments.length,
-      finalizing: true,
+      phase: 'uploading',
+      fileName: firstFileName,
+      fileIndex: 0,
+      totalFiles,
+      uploadedBytes: 0,
+      totalBytes,
+      ratio: 0,
     } satisfies UploadProgressPayload,
   })
 
@@ -284,6 +295,21 @@ async function performUpload(tabId: number, passphrase?: string): Promise<void> 
     expires: expiresSeconds,
     files: uploadFiles,
     ...(passphrase ? { passphrase } : {}),
+    onProgress: (p) => {
+      broadcastToPopups({
+        type: 'UPLOAD_PROGRESS',
+        payload: {
+          tabId,
+          phase: 'uploading',
+          fileName: p.currentFile.name,
+          fileIndex: p.currentFile.index,
+          totalFiles,
+          uploadedBytes: p.uploadedBytes,
+          totalBytes: p.totalBytes,
+          ratio: p.ratio,
+        } satisfies UploadProgressPayload,
+      })
+    },
   })
 
   // Check after the (potentially long) SDK upload before touching the compose window.
