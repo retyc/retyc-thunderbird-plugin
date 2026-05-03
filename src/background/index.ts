@@ -15,6 +15,7 @@ import type {
   ComposeInfoResponse,
   ConfirmUploadPayload,
   UploadCapabilitiesResponse,
+  UserQuotaResponse,
   UploadProgressPayload,
   UploadDonePayload,
   UploadErrorPayload,
@@ -468,6 +469,7 @@ browser.runtime.onMessage.addListener(
       case 'SET_ENABLED':        return handleSetEnabled(msg.payload as SetEnabledPayload)
       case 'GET_COMPOSE_INFO':   return Promise.resolve(handleGetComposeInfo(msg.payload as { tabId: number }))
       case 'GET_UPLOAD_CAPABILITIES': return handleGetUploadCapabilities()
+      case 'GET_USER_QUOTA':     return handleGetUserQuota()
       case 'CONFIRM_UPLOAD':     return handleConfirmUpload(msg.payload as ConfirmUploadPayload)
       case 'CANCEL_UPLOAD':      return Promise.resolve(handleCancelUpload(msg.payload as { tabId: number }))
       default:                   return undefined
@@ -507,6 +509,21 @@ async function handleGetAuthStatus(): Promise<AuthStatusResponse> {
     enabled,
     userInfo: _cachedUserInfo ?? undefined,
     tokenExpiresAt,
+  }
+}
+
+async function handleGetUserQuota(): Promise<UserQuotaResponse | { error: string }> {
+  try {
+    const sdk = await getSDK()
+    const q = await sdk.user.getUserQuota()
+    return {
+      usedStorage:   q.used_storage,
+      maxStorage:    q.max_storage,
+      countShare:    q.count_share,
+      maxCountShare: q.max_count_share,
+    }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) }
   }
 }
 

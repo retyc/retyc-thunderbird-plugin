@@ -16,17 +16,49 @@
     </header>
 
     <form id="settings-form" novalidate>
-      <section>
-        <h2>Authentication</h2>
+      <section id="account-section" class="hidden">
+        <h2>Account</h2>
 
-        <div id="auth-authenticated" class="auth-block hidden">
-          <div class="status-badge success"><span class="dot"></span>Connected to Retyc</div>
-          <button type="button" id="btn-logout" class="btn btn-secondary">Log out</button>
+        <div class="account-card">
+          <div class="account-info">
+            <span id="account-fullname" class="account-fullname"></span>
+            <span id="account-email" class="account-email"></span>
+            <span id="account-expires" class="account-expires"></span>
+          </div>
+          <button type="button" id="btn-refresh" class="btn-icon-round" title="Refresh token" aria-label="Refresh token">↻</button>
         </div>
+
+        <div id="quota-block" class="quota-block hidden">
+          <div class="quota-row">
+            <div class="quota-row-header">
+              <span class="quota-label">Storage</span>
+              <span id="quota-storage-text" class="quota-value"></span>
+            </div>
+            <div class="progress"><div id="quota-storage-bar" class="progress-fill"></div></div>
+          </div>
+
+          <div id="quota-transfers-row" class="quota-row hidden">
+            <div class="quota-row-header">
+              <span class="quota-label">Transfers</span>
+              <span id="quota-transfers-text" class="quota-value"></span>
+            </div>
+            <div class="progress"><div id="quota-transfers-bar" class="progress-fill"></div></div>
+          </div>
+        </div>
+
+        <button type="button" id="btn-logout" class="btn btn-secondary">Log out</button>
+      </section>
+
+      <section id="auth-section" class="hidden">
+        <h2>Authentication</h2>
 
         <div id="auth-unauthenticated" class="auth-block hidden">
           <div class="status-badge error"><span class="dot"></span>Not connected</div>
           <button type="button" id="btn-login" class="btn btn-primary">Log in with Retyc</button>
+          <div class="signup-row">
+            <span>New to Retyc?</span>
+            <a href="https://retyc.com/" target="_blank" rel="noopener noreferrer" class="signup-link">Sign up</a>
+          </div>
         </div>
 
         <div id="auth-device-flow" class="auth-block hidden">
