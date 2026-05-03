@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: ['18', '20', '22']
+        node: ['24']
 
     steps:
       - name: Checkout
@@ -39,20 +39,15 @@ jobs:
         run: npm run lint
 
       - name: Validate manifest (web-ext lint)
-        run: npx web-ext lint --source-dir=. --self-hosted
+        run: npx web-ext lint --source-dir=dist --self-hosted
         continue-on-error: true
 
       - name: Upload build artifact
-        if: matrix.node == '20'
+        if: matrix.node == '24'
         uses: actions/upload-artifact@v7
         with:
           name: retyc-thunderbird-plugin-${{ github.sha }}
-          path: |
-            dist/
-            assets/
-            manifest.json
-            README.md
-            LICENSE
+          path: dist/
           retention-days: 30
 
   package:
@@ -68,12 +63,13 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: retyc-thunderbird-plugin-${{ github.sha }}
+          path: dist/
 
       - name: Check tag matches manifest version
         id: version
         run: |
           TAG="${{ github.event.release.tag_name }}"
-          MANIFEST_VERSION=$(node -p "require('./manifest.json').version")
+          MANIFEST_VERSION=$(node -p "require('./dist/manifest.json').version")
           TAG_VERSION="${TAG#v}"
           if [ "$TAG_VERSION" != "$MANIFEST_VERSION" ]; then
             echo "❌ Tag '$TAG' does not match manifest version '$MANIFEST_VERSION'"
@@ -85,19 +81,9 @@ jobs:
       - name: Package .xpi
         run: |
           npx web-ext@10 build \
-            --source-dir=. \
+            --source-dir=dist \
             --artifacts-dir=artifacts \
-            --filename "retyc-thunderbird-plugin-${{ steps.version.outputs.version }}.xpi" \
-            --ignore-files="src/**" \
-            --ignore-files="node_modules/**" \
-            --ignore-files="webpack.config.js" \
-            --ignore-files="eslint.config.*" \
-            --ignore-files="tsconfig.json" \
-            --ignore-files="package*.json" \
-            --ignore-files=".github/**" \
-            --ignore-files=".claude/**" \
-            --ignore-files=".idea/**" \
-            --ignore-files="CLAUDE.md"
+            --filename "retyc-thunderbird-plugin-${{ steps.version.outputs.version }}.xpi"
 
       - name: Upload .xpi to release
         uses: softprops/action-gh-release@v3

@@ -31,8 +31,6 @@ async function loadStatus(): Promise<void> {
   try {
     const status = await send<AuthStatusResponse>({ type: 'GET_AUTH_STATUS' })
     showAuth(status.authenticated ? 'auth-authenticated' : 'auth-unauthenticated')
-    ;(document.getElementById('api-url') as HTMLInputElement).value = status.apiUrl
-    ;(document.getElementById('app-url') as HTMLInputElement).value = status.appUrl
     ;(document.getElementById('expires-days') as HTMLInputElement).value = String(status.expiresDays)
     ;(document.getElementById('auto-send') as HTMLInputElement).checked = status.autoSend
   } catch (err) {
@@ -93,51 +91,11 @@ async function logout(): Promise<void> {
   showFeedback('Logged out.', 'success')
 }
 
-function validateSecureUrl(value: string, label: string): string | null {
-  if (!value) return `${label} is required.`
-  let url: URL
-  try {
-    url = new URL(value)
-  } catch {
-    return `${label} is not a valid URL.`
-  }
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    return `${label} must use http or https.`
-  }
-  return null
-}
-
 function validateForm(): string | null {
-  const apiUrl = (document.getElementById('api-url') as HTMLInputElement).value.trim()
-  const appUrl = (document.getElementById('app-url') as HTMLInputElement).value.trim()
   const expiresDays = parseInt((document.getElementById('expires-days') as HTMLInputElement).value, 10)
-
-  return (
-    validateSecureUrl(apiUrl, 'API URL') ??
-    validateSecureUrl(appUrl, 'App URL') ??
-    (!Number.isFinite(expiresDays) || expiresDays < 1 || expiresDays > 365
-      ? 'Expiry must be between 1 and 365 days.'
-      : null)
-  )
-}
-
-async function ensureOriginPermission(url: string): Promise<boolean> {
-  const u = new URL(url)
-  const origin = `${u.protocol}//${u.host}/*`
-  const has = await browser.permissions.contains({ origins: [origin] })
-  if (has) return true
-  return browser.permissions.request({ origins: [origin] })
-}
-
-function isInsecureNonLocalhost(url: string): boolean {
-  try {
-    const u = new URL(url)
-    if (u.protocol !== 'http:') return false
-    const host = u.hostname
-    return host !== 'localhost' && host !== '127.0.0.1' && host !== '[::1]'
-  } catch {
-    return false
-  }
+  return !Number.isFinite(expiresDays) || expiresDays < 1 || expiresDays > 365
+    ? 'Expiry must be between 1 and 365 days.'
+    : null
 }
 
 async function saveSettings(e: Event): Promise<void> {
@@ -146,34 +104,7 @@ async function saveSettings(e: Event): Promise<void> {
   const error = validateForm()
   if (error) { showFeedback(error, 'error'); return }
 
-  const apiUrl = (document.getElementById('api-url') as HTMLInputElement).value.trim()
-  const appUrl = (document.getElementById('app-url') as HTMLInputElement).value.trim()
-
-  if (isInsecureNonLocalhost(apiUrl)) {
-    showFeedback(
-      'Warning: API URL uses http:// on a non-localhost host. OAuth tokens will transit unencrypted.',
-      'error',
-    )
-    // Continue — do not block, user may have a deliberate dev setup.
-  }
-
-  // Request host permission upfront. The plugin only ships api.retyc.com by default;
-  // any other host must be granted at save time (user gesture from form submit).
-  let granted: boolean
-  try {
-    granted = await ensureOriginPermission(apiUrl)
-  } catch (err) {
-    showFeedback(`Permission request failed: ${err instanceof Error ? err.message : String(err)}`, 'error')
-    return
-  }
-  if (!granted) {
-    showFeedback('Host permission denied. Settings not saved — the plugin cannot reach this API URL without it.', 'error')
-    return
-  }
-
   const payload: SettingsPayload = {
-    apiUrl,
-    appUrl,
     expiresDays: parseInt((document.getElementById('expires-days') as HTMLInputElement).value, 10),
     autoSend: (document.getElementById('auto-send') as HTMLInputElement).checked,
   }

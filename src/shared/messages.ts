@@ -20,8 +20,6 @@ export interface UserInfo {
 
 export interface AuthStatusResponse {
   authenticated: boolean
-  apiUrl: string
-  appUrl: string
   expiresDays: number
   autoSend: boolean
   enabled: boolean
@@ -47,8 +45,6 @@ export interface DeviceFlowResponse {
 }
 
 export interface SettingsPayload {
-  apiUrl: string
-  appUrl: string
   expiresDays: number
   autoSend: boolean
 }

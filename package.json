@@ -22,7 +22,7 @@
     "mailextension"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   },
   "scripts": {
     "build": "webpack --mode production",
@@ -32,10 +32,10 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist artifacts",
     "package": "npm run build && npm run package:xpi",
-    "package:xpi": "web-ext build --source-dir=. --artifacts-dir=artifacts --filename retyc-thunderbird-plugin-{version}.xpi --ignore-files=\"src/**\" --ignore-files=\"node_modules/**\" --ignore-files=\"webpack.config.js\" --ignore-files=\"eslint.config.*\" --ignore-files=\"tsconfig.json\" --ignore-files=\"package*.json\" --ignore-files=\".github/**\" --ignore-files=\".claude/**\" --ignore-files=\".idea/**\" --ignore-files=\"CLAUDE.md\""
+    "package:xpi": "web-ext build --source-dir=dist --artifacts-dir=artifacts --filename retyc-thunderbird-plugin-{version}.xpi"
   },
   "dependencies": {
-    "@retyc/sdk": "^1.0.1"
+    "@retyc/sdk": "^1.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
