@@ -2,10 +2,8 @@ import { getSDK, invalidateSDK } from './sdk-factory'
 import {
   DEFAULT_AUTO_SEND,
   DEFAULT_ENABLED,
-  DEFAULT_EXPIRES_DAYS,
   STORAGE_KEY_AUTO_SEND,
   STORAGE_KEY_ENABLED,
-  STORAGE_KEY_EXPIRES_DAYS,
 } from '../shared/constants'
 import type {
   Message,
@@ -16,6 +14,7 @@ import type {
   SetEnabledPayload,
   ComposeInfoResponse,
   ConfirmUploadPayload,
+  UploadCapabilitiesResponse,
   UploadProgressPayload,
   UploadDonePayload,
   UploadErrorPayload,
@@ -39,6 +38,10 @@ interface PendingUpload {
   abort: AbortController
 }
 const pendingUploads = new Map<number, PendingUpload>()
+
+// One-shot cleanup of the legacy `retyc_expires_days` key. The setting moved into
+// the dialog itself, so existing installs would otherwise carry a dead value.
+browser.storage.local.remove('retyc_expires_days').catch(() => { /* best effort */ })
 
 // --- Cleanup listeners ---
 
@@ -73,12 +76,6 @@ browser.tabs.onRemoved.addListener((tabId: number) => {
 
 // --- Helpers ---
 
-async function getExpiresDays(): Promise<number> {
-  const result = await browser.storage.local.get(STORAGE_KEY_EXPIRES_DAYS)
-  const raw: unknown = result[STORAGE_KEY_EXPIRES_DAYS]
-  return typeof raw === 'number' ? raw : DEFAULT_EXPIRES_DAYS
-}
-
 async function getAutoSend(): Promise<boolean> {
   const result = await browser.storage.local.get(STORAGE_KEY_AUTO_SEND)
   const raw: unknown = result[STORAGE_KEY_AUTO_SEND]
@@ -100,6 +97,12 @@ const TOKEN_REFRESH_THRESHOLD_SECONDS = 60
 
 function isTokenNearExpiry(expiresAt: number): boolean {
   return expiresAt - TOKEN_REFRESH_THRESHOLD_SECONDS < Math.floor(Date.now() / 1000)
+}
+
+function formatBytesShort(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`
 }
 
 function notifyUser(message: string): void {
@@ -175,8 +178,8 @@ browser.compose.onBeforeSend.addListener(
       const win = await browser.windows.create({
         url: browser.runtime.getURL(`dialog.html?tabId=${tabId}`),
         type: 'popup',
-        width: 520,
-        height: 410,
+        width: 700,
+        height: 600,
       })
 
       const pending = pendingUploads.get(tabId)
@@ -217,15 +220,17 @@ function checkAbort(signal: AbortSignal): void {
   if (signal.aborted) throw new Error('Upload cancelled by user.')
 }
 
-async function performUpload(tabId: number, passphrase?: string): Promise<void> {
+async function performUpload(
+  tabId: number,
+  expirySeconds: number,
+  passphrase?: string,
+): Promise<void> {
   const pending = pendingUploads.get(tabId)
   if (!pending) throw new Error('No pending upload found for this compose tab.')
 
   const { signal } = pending.abort
 
   const sdk = await getSDK()
-  const expiresDays = await getExpiresDays()
-  const expiresSeconds = expiresDays * 24 * 60 * 60
 
   const MAX_TOTAL_BYTES = 5 * 1024 * 1024 * 1024 // 5 GB hard limit
   const totalBytes = pending.attachments.reduce((sum, a) => sum + (a.size ?? 0), 0)
@@ -233,6 +238,31 @@ async function performUpload(tabId: number, passphrase?: string): Promise<void> 
     throw new Error(
       `Total attachment size (${(totalBytes / 1e9).toFixed(1)} GB) exceeds the 5 GB limit.`,
     )
+  }
+
+  // Server is the source of truth — re-validate against the live capabilities so that
+  // a stale dialog (or a crafted CONFIRM_UPLOAD) cannot push past the account limits.
+  // Failing here also spares the user a long upload that would only be rejected at the
+  // end. Capabilities lookup failures are non-fatal: the API will reject if we exceed.
+  let caps: Awaited<ReturnType<typeof sdk.user.getUploadCapabilities>> | null = null
+  try {
+    caps = await sdk.user.getUploadCapabilities()
+  } catch (err) {
+    console.warn('[Retyc] Capability lookup failed, proceeding without local validation:', err)
+  }
+  if (caps) {
+    const maxExp = caps.max_share_expiration_time
+    if (maxExp != null && expirySeconds > maxExp) {
+      throw new Error(
+        `Selected expiry exceeds the account limit (${maxExp}s). Please pick a shorter duration.`,
+      )
+    }
+    const maxSize = caps.max_share_size
+    if (maxSize != null && totalBytes > maxSize) {
+      throw new Error(
+        `Total attachment size (${formatBytesShort(totalBytes)}) exceeds the account limit (${formatBytesShort(maxSize)}).`,
+      )
+    }
   }
 
   // Read attachments one at a time to spread out the file-decode work; the SDK still
@@ -292,7 +322,7 @@ async function performUpload(tabId: number, passphrase?: string): Promise<void> 
 
   const result = await sdk.transfers.upload({
     recipients: pending.recipients,
-    expires: expiresSeconds,
+    expires: expirySeconds,
     files: uploadFiles,
     ...(passphrase ? { passphrase } : {}),
     onProgress: (p) => {
@@ -426,6 +456,7 @@ browser.runtime.onMessage.addListener(
       case 'SAVE_SETTINGS':      return handleSaveSettings(msg.payload as SettingsPayload)
       case 'SET_ENABLED':        return handleSetEnabled(msg.payload as SetEnabledPayload)
       case 'GET_COMPOSE_INFO':   return Promise.resolve(handleGetComposeInfo(msg.payload as { tabId: number }))
+      case 'GET_UPLOAD_CAPABILITIES': return handleGetUploadCapabilities()
       case 'CONFIRM_UPLOAD':     return handleConfirmUpload(msg.payload as ConfirmUploadPayload)
       case 'CANCEL_UPLOAD':      return Promise.resolve(handleCancelUpload(msg.payload as { tabId: number }))
       default:                   return undefined
@@ -436,7 +467,6 @@ browser.runtime.onMessage.addListener(
 async function handleGetAuthStatus(): Promise<AuthStatusResponse> {
   let authenticated = false
   let tokenExpiresAt: number | undefined
-  const expiresDays = await getExpiresDays()
   const autoSend = await getAutoSend()
   const enabled = await getEnabled()
 
@@ -462,11 +492,23 @@ async function handleGetAuthStatus(): Promise<AuthStatusResponse> {
 
   return {
     authenticated,
-    expiresDays,
     autoSend,
     enabled,
     userInfo: _cachedUserInfo ?? undefined,
     tokenExpiresAt,
+  }
+}
+
+async function handleGetUploadCapabilities(): Promise<UploadCapabilitiesResponse | { error: string }> {
+  try {
+    const sdk = await getSDK()
+    const caps = await sdk.user.getUploadCapabilities()
+    return {
+      maxShareExpirationTime: caps.max_share_expiration_time ?? null,
+      maxShareSize: caps.max_share_size ?? null,
+    }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) }
   }
 }
 
@@ -524,7 +566,6 @@ async function handleLogout(): Promise<{ ok: boolean }> {
 
 async function handleGetSettings(): Promise<SettingsPayload> {
   return {
-    expiresDays: await getExpiresDays(),
     autoSend: await getAutoSend(),
   }
 }
@@ -532,7 +573,6 @@ async function handleGetSettings(): Promise<SettingsPayload> {
 async function handleSaveSettings(payload: SettingsPayload): Promise<{ ok: boolean; error?: string }> {
   try {
     await browser.storage.local.set({
-      [STORAGE_KEY_EXPIRES_DAYS]: payload.expiresDays,
       [STORAGE_KEY_AUTO_SEND]: payload.autoSend,
     })
     invalidateSDK()
@@ -570,16 +610,31 @@ function isAuthError(message: string): boolean {
   )
 }
 
+// Defence in depth: the dialog already constrains the select to the API-advertised
+// max, but messages can come from anywhere — clamp to a sane window.
+const MIN_EXPIRY_SECONDS = 60
+const MAX_EXPIRY_SECONDS = 365 * 24 * 60 * 60
+
 async function handleConfirmUpload(
   payload: ConfirmUploadPayload,
 ): Promise<{ ok: boolean; needsPassphrase?: boolean; needsReauth?: boolean; error?: string }> {
-  const { tabId, passphrase } = payload
+  const { tabId, expirySeconds, passphrase } = payload
   // Wipe the passphrase from the inbound message envelope. The runtime may keep a
   // reference to the original payload object until GC; clearing the property gives us
   // a best-effort guarantee that it won't sit around in memory longer than needed.
   ;(payload as { passphrase?: string }).passphrase = undefined
+
+  if (
+    typeof expirySeconds !== 'number' ||
+    !Number.isFinite(expirySeconds) ||
+    expirySeconds < MIN_EXPIRY_SECONDS ||
+    expirySeconds > MAX_EXPIRY_SECONDS
+  ) {
+    return { ok: false, error: 'Invalid expiry duration.' }
+  }
+
   try {
-    await performUpload(tabId, passphrase)
+    await performUpload(tabId, expirySeconds, passphrase)
     return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

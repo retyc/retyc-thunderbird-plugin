@@ -34,26 +34,50 @@
           <span id="recipients" class="value"></span>
         </div>
         <div class="info-row">
-          <span class="label">Files</span>
+          <span class="label">
+            Files
+            <span id="max-size-hint" class="max-size-hint hidden"></span>
+          </span>
           <ul id="file-list" class="file-list"></ul>
         </div>
       </div>
 
-      <div class="passphrase-block">
-        <label class="passphrase-label" for="passphrase-input">
-          Passphrase
-          <span class="passphrase-hint">(required for recipients without a Retyc account)</span>
+      <p id="size-over-limit" class="size-over-limit hidden" role="alert"></p>
+
+      <div class="options-block">
+        <label class="toggle-row">
+          <input type="checkbox" id="use-passphrase" class="toggle-switch" />
+          <span class="toggle-text">
+            <span class="toggle-label">Use a passphrase</span>
+            <span class="toggle-hint">Required for recipients without a Retyc account.</span>
+          </span>
         </label>
-        <div class="passphrase-row">
-          <input
-            type="password"
-            id="passphrase-input"
-            class="passphrase-input"
-            placeholder="Enter a passphrase…"
-            autocomplete="off"
-          />
-          <button type="button" id="btn-toggle-pass" class="btn-icon" title="Show/hide passphrase">👁</button>
+
+        <div id="passphrase-block" class="passphrase-block hidden">
+          <div class="passphrase-row">
+            <input
+              type="password"
+              id="passphrase-input"
+              class="passphrase-input"
+              placeholder="Enter a passphrase (≥ 8 characters)…"
+              autocomplete="off"
+              aria-describedby="passphrase-error"
+            />
+            <button
+              type="button"
+              id="btn-toggle-pass"
+              class="btn-icon"
+              aria-label="Show passphrase"
+              aria-pressed="false"
+            >👁</button>
+          </div>
+          <p id="passphrase-error" class="passphrase-error-msg hidden" role="alert"></p>
         </div>
+
+        <label class="field">
+          <span class="field-label">Expires after</span>
+          <select id="expiry-select" class="select-input"></select>
+        </label>
       </div>
 
       <div class="actions">

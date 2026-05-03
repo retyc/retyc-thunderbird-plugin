@@ -28,8 +28,11 @@ required at upload time.
 - **Compose-popup** (`src/compose-popup/`): button inside the compose
   window — shows status, exposes the per-message kill switch
   (`retyc_enabled`), and shortcut to settings.
-- **Options** (`src/options/`): settings page (API URL, app URL, expiry,
-  auto-send).
+- **Options** (`src/options/`): settings page exposing only the auto-send
+  toggle (and login/logout). The API URL is hard-coded at build time via
+  `__RETYC_API_URL__` (see `webpack.config.js`); the app URL comes from the
+  API response. Per-transfer expiry is picked from the dialog itself
+  (default 7 days).
 
 ## The send-interception flow
 
@@ -122,9 +125,6 @@ npm run package      # build + create .xpi in artifacts/
 | Key | Type | Notes |
 |---|---|---|
 | `retyc_tokens` | `TokenSet` | access + refresh tokens. Validated on read; auto-cleared if shape is invalid. |
-| `retyc_api_url` | `string` | API base URL |
-| `retyc_app_url` | `string` | App URL for the share link |
-| `retyc_expires_days` | `number` | transfer expiry in days |
 | `retyc_auto_send` | `boolean` | 1-step (auto-send) vs 2-step |
 | `retyc_enabled` | `boolean` | global kill switch toggled from the compose-popup. When `false`, `onBeforeSend` returns immediately and the email is sent normally. Default `true`. |
 
@@ -138,13 +138,8 @@ Required at install time:
 - `notifications` — system notifications when SDK fails or upload is cancelled
 - `tabs` — `tabs.onRemoved` for cleanup
 - `https://api.retyc.com/*` — default API origin, granted upfront so that
-  out-of-the-box installs work with the Retyc-hosted backend.
-
-Optional, requested at runtime:
-- `<all_urls>` — only requested in `options.ts > saveSettings()` when the
-  user configures a non-default API URL. Asked via
-  `browser.permissions.request({ origins })` from the Save click (user
-  gesture). Keeps the install-time permissions narrow for ATN review.
+  out-of-the-box installs work with the Retyc-hosted backend. The API URL
+  is fixed at build time, so no runtime origin permission is requested.
 
 ## Patterns
 
