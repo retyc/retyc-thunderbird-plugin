@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Retyc",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Send large files securely with end-to-end encryption via Retyc",
   "browser_specific_settings": {
     "gecko": {
