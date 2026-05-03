@@ -60,14 +60,17 @@ export interface ConfirmUploadPayload {
   passphrase?: string
 }
 
+export type UploadPhase = 'reading' | 'uploading'
+
 export interface UploadProgressPayload {
   tabId: number
+  phase: UploadPhase
   fileName: string
-  fileIndex: number
+  fileIndex: number   // 0-based
   totalFiles: number
-  // True once all files have been read locally and we're now waiting on the
-  // server-side encrypt+upload. The dialog uses this to switch to an indeterminate state.
-  finalizing?: boolean
+  uploadedBytes: number
+  totalBytes: number
+  ratio: number       // 0..1
 }
 
 export interface UploadDonePayload {
