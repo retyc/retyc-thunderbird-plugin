@@ -1,3 +1,4 @@
+import '../shared/common.css'
 import './compose-popup.css'
 import type { Message, AuthStatusResponse } from '../shared/messages'
 

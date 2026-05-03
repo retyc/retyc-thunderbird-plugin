@@ -1,0 +1,203 @@
+/* Shared design tokens and primitives for all extension pages. */
+
+:root {
+  --retyc-primary: #1a3c6e;
+  --retyc-primary-shadow: rgba(26, 60, 110, 0.12);
+
+  --retyc-text: #1a1a2e;
+  --retyc-text-muted: #374151;
+  --retyc-text-soft: #6b7280;
+  --retyc-text-faint: #9ca3af;
+
+  --retyc-bg: #ffffff;
+  --retyc-bg-soft: #f8fafc;
+  --retyc-bg-muted: #f3f4f6;
+
+  --retyc-border: #e2e8f0;
+  --retyc-border-soft: #e8e8f0;
+  --retyc-border-input: #d1d5db;
+
+  --retyc-success: #16a34a;
+  --retyc-success-dot: #22c55e;
+  --retyc-success-bg: #dcfce7;
+  --retyc-success-border: #bbf7d0;
+
+  --retyc-error: #dc2626;
+  --retyc-error-dot: #ef4444;
+  --retyc-error-bg: #fef2f2;
+  --retyc-error-border: #fecaca;
+  --retyc-error-strong-bg: #fee2e2;
+  --retyc-error-strong: #991b1b;
+
+  --retyc-warn: #b45309;
+  --retyc-warn-soft: #d97706;
+
+  --retyc-progress-bg: #e5e7eb;
+
+  --retyc-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--retyc-font);
+  color: var(--retyc-text);
+  background: var(--retyc-bg);
+  font-size: 14px;
+}
+
+.hidden { display: none; }
+
+.state { display: flex; flex-direction: column; gap: 10px; }
+.state.hidden { display: none; }
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--retyc-border-soft);
+}
+
+h1 { color: var(--retyc-primary); font-weight: 700; }
+.subtitle { color: var(--retyc-text-faint); font-size: 13px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn:active { opacity: 0.7; }
+.btn-primary { background: var(--retyc-primary); color: #fff; }
+.btn-secondary {
+  background: var(--retyc-bg-muted);
+  color: var(--retyc-text-muted);
+  border: 1px solid var(--retyc-border-input);
+}
+.btn-link {
+  background: transparent;
+  color: var(--retyc-primary);
+  text-decoration: underline;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.btn-icon-round {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--retyc-border-input);
+  background: #fff;
+  color: var(--retyc-text-soft);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-icon-round:hover { background: var(--retyc-bg-muted); color: var(--retyc-primary); }
+.btn-icon-round:disabled { opacity: 0.5; cursor: default; }
+
+/* Spinner */
+.spinner {
+  border-radius: 50%;
+  border-style: solid;
+  border-color: #e0e7ef;
+  border-top-color: var(--retyc-primary);
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Status badge */
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.status-badge.success { color: var(--retyc-success); }
+.status-badge.success .dot { background: var(--retyc-success-dot); }
+.status-badge.error { color: var(--retyc-error); }
+.status-badge.error .dot { background: var(--retyc-error-dot); }
+
+/* Hints and helper text */
+.hint { color: var(--retyc-text-soft); font-size: 13px; line-height: 1.5; }
+.hint.small { font-size: 12px; }
+
+/* Verification link / code box (login flow) */
+.verification-link {
+  color: var(--retyc-primary);
+  font-size: 13px;
+  word-break: break-all;
+}
+.code-box {
+  background: var(--retyc-bg-muted);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+.user-code {
+  font-family: monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--retyc-primary);
+}
+
+/* Form fields */
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-weight: 500; font-size: 13px; color: var(--retyc-text-muted); }
+.field-hint { font-size: 12px; color: var(--retyc-text-faint); }
+
+/* Common input focus ring */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--retyc-primary);
+  box-shadow: 0 0 0 2px var(--retyc-primary-shadow);
+}
+
+/* Progress bar fill */
+.progress-fill {
+  height: 100%;
+  background: var(--retyc-primary);
+  transition: width 0.25s ease;
+}
+.progress-fill.danger { background: var(--retyc-error); }
+
+/* Generic feedback banner */
+.feedback {
+  padding: 10px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.feedback.hidden { display: none; }
+.feedback.success {
+  background: var(--retyc-success-bg);
+  color: var(--retyc-success);
+  border: 1px solid var(--retyc-success-border);
+}
+.feedback.error {
+  background: var(--retyc-error-bg);
+  color: var(--retyc-error);
+  border: 1px solid var(--retyc-error-border);
+}
