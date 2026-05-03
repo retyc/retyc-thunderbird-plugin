@@ -70,6 +70,28 @@ declare namespace browser {
     function openPopup(): Promise<void>
   }
 
+  namespace composeAction {
+    interface SetTitleDetails {
+      title: string
+      tabId?: number
+      windowId?: number
+    }
+    interface SetBadgeTextDetails {
+      text: string
+      tabId?: number
+      windowId?: number
+    }
+    type ColorArray = [number, number, number, number]
+    interface SetBadgeBackgroundColorDetails {
+      color: string | ColorArray | null
+      tabId?: number
+      windowId?: number
+    }
+    function setTitle(details: SetTitleDetails): Promise<void>
+    function setBadgeText(details: SetBadgeTextDetails): Promise<void>
+    function setBadgeBackgroundColor(details: SetBadgeBackgroundColorDetails): Promise<void>
+  }
+
   namespace notifications {
     interface CreateNotificationOptions {
       type: 'basic' | 'image' | 'list' | 'progress'
