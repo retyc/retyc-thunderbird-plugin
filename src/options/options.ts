@@ -1,3 +1,4 @@
+import '../shared/common.css'
 import './options.css'
 import type {
   Message,

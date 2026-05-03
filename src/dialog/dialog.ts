@@ -1,3 +1,4 @@
+import '../shared/common.css'
 import './dialog.css'
 import { DEFAULT_EXPIRES_SECONDS } from '../shared/constants'
 import type {
