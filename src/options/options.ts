@@ -31,7 +31,6 @@ async function loadStatus(): Promise<void> {
   try {
     const status = await send<AuthStatusResponse>({ type: 'GET_AUTH_STATUS' })
     showAuth(status.authenticated ? 'auth-authenticated' : 'auth-unauthenticated')
-    ;(document.getElementById('expires-days') as HTMLInputElement).value = String(status.expiresDays)
     ;(document.getElementById('auto-send') as HTMLInputElement).checked = status.autoSend
   } catch (err) {
     showFeedback(`Failed to load settings: ${err instanceof Error ? err.message : String(err)}`, 'error')
@@ -91,21 +90,10 @@ async function logout(): Promise<void> {
   showFeedback('Logged out.', 'success')
 }
 
-function validateForm(): string | null {
-  const expiresDays = parseInt((document.getElementById('expires-days') as HTMLInputElement).value, 10)
-  return !Number.isFinite(expiresDays) || expiresDays < 1 || expiresDays > 365
-    ? 'Expiry must be between 1 and 365 days.'
-    : null
-}
-
 async function saveSettings(e: Event): Promise<void> {
   e.preventDefault()
 
-  const error = validateForm()
-  if (error) { showFeedback(error, 'error'); return }
-
   const payload: SettingsPayload = {
-    expiresDays: parseInt((document.getElementById('expires-days') as HTMLInputElement).value, 10),
     autoSend: (document.getElementById('auto-send') as HTMLInputElement).checked,
   }
 

@@ -1,12 +1,27 @@
 import './dialog.css'
+import { DEFAULT_EXPIRES_SECONDS } from '../shared/constants'
 import type {
   Message,
   AuthStatusResponse,
   ComposeInfoResponse,
+  UploadCapabilitiesResponse,
   UploadProgressPayload,
   UploadDonePayload,
   UploadErrorPayload,
 } from '../shared/messages'
+
+interface ExpiryOption { label: string; value: number }
+
+const EXPIRY_OPTIONS: readonly ExpiryOption[] = [
+  { label: '1 hour',   value: 3600 },
+  { label: '12 hours', value: 43200 },
+  { label: '1 day',    value: 86400 },
+  { label: '3 days',   value: 259200 },
+  { label: '7 days',   value: 604800 },
+  { label: '30 days',  value: 2592000 },
+  { label: '90 days',  value: 7776000 },
+  { label: '1 year',   value: 31536000 },
+] as const
 
 function send<T>(msg: Message): Promise<T> {
   return browser.runtime.sendMessage(msg) as Promise<T>
@@ -81,6 +96,47 @@ function showError(message: string): void {
   show('state-error')
 }
 
+// Returns false when the API limit is shorter than our shortest preset — in that
+// case the dialog should refuse to upload rather than fabricate an invalid option.
+function populateExpirySelect(maxExpiration: number | null): boolean {
+  const select = document.getElementById('expiry-select') as HTMLSelectElement
+  const options = maxExpiration == null
+    ? [...EXPIRY_OPTIONS]
+    : EXPIRY_OPTIONS.filter(o => o.value <= maxExpiration)
+
+  if (options.length === 0) return false
+
+  select.innerHTML = ''
+  for (const opt of options) {
+    const el = document.createElement('option')
+    el.value = String(opt.value)
+    el.textContent = opt.label
+    select.appendChild(el)
+  }
+
+  // Default to 7 days when allowed; otherwise pick the longest available option.
+  const desired = options.find(o => o.value === DEFAULT_EXPIRES_SECONDS)?.value
+    ?? options[options.length - 1].value
+  select.value = String(desired)
+  return true
+}
+
+function showMaxSizeHint(maxShareSize: number | null): void {
+  if (maxShareSize == null) return
+  const hint = document.getElementById('max-size-hint')!
+  hint.textContent = `(max ${formatSize(maxShareSize)})`
+  hint.classList.remove('hidden')
+}
+
+function showSizeOverLimit(totalBytes: number, maxShareSize: number): void {
+  const banner = document.getElementById('size-over-limit')!
+  banner.textContent =
+    `Total attachment size (${formatSize(totalBytes)}) exceeds your account limit ` +
+    `of ${formatSize(maxShareSize)}. Remove some attachments and try again.`
+  banner.classList.remove('hidden')
+  ;(document.getElementById('btn-confirm') as HTMLButtonElement).disabled = true
+}
+
 async function init(): Promise<void> {
   show('state-loading')
 
@@ -98,41 +154,69 @@ async function init(): Promise<void> {
     btn.textContent = status.autoSend ? 'Upload & Send' : 'Upload'
   } catch { /* keep default label */ }
 
+  // Fetch compose info and capabilities in parallel. Capabilities are tolerant of
+  // failure (we keep the full preset list), but compose info is required.
+  let info: ComposeInfoResponse & { error?: string }
+  let caps: (UploadCapabilitiesResponse & { error?: string }) | null
   try {
-    const info = await send<ComposeInfoResponse & { error?: string }>({
-      type: 'GET_COMPOSE_INFO',
-      payload: { tabId },
-    })
-
-    if ('error' in info && info.error) {
-      showError(info.error)
-      return
-    }
-
-    // Render recipients
-    document.getElementById('recipients')!.textContent =
-      info.recipients.length > 0 ? info.recipients.join(', ') : '(no recipients)'
-
-    // Render file list
-    const list = document.getElementById('file-list')!
-    list.innerHTML = ''
-    for (const att of info.attachments) {
-      const li = document.createElement('li')
-      li.className = 'file-item'
-      const nameSpan = document.createElement('span')
-      nameSpan.className = 'file-name'
-      nameSpan.textContent = att.name
-      const sizeSpan = document.createElement('span')
-      sizeSpan.className = 'file-size'
-      sizeSpan.textContent = formatSize(att.size)
-      li.appendChild(nameSpan)
-      li.appendChild(sizeSpan)
-      list.appendChild(li)
-    }
-
-    show('state-confirm')
+    [info, caps] = await Promise.all([
+      send<ComposeInfoResponse & { error?: string }>({
+        type: 'GET_COMPOSE_INFO',
+        payload: { tabId },
+      }),
+      send<UploadCapabilitiesResponse & { error?: string }>({ type: 'GET_UPLOAD_CAPABILITIES' })
+        .catch(() => null),
+    ])
   } catch (err) {
     showError(err instanceof Error ? err.message : String(err))
+    return
+  }
+
+  if ('error' in info && info.error) {
+    showError(info.error)
+    return
+  }
+
+  const maxExpiration = caps && !('error' in caps && caps.error) ? caps.maxShareExpirationTime : null
+  const maxShareSize  = caps && !('error' in caps && caps.error) ? caps.maxShareSize : null
+
+  if (!populateExpirySelect(maxExpiration)) {
+    showError(
+      'Your Retyc account does not allow shares with the available expiry presets. ' +
+      'Please contact your administrator.',
+    )
+    return
+  }
+  showMaxSizeHint(maxShareSize)
+
+  // Render recipients
+  document.getElementById('recipients')!.textContent =
+    info.recipients.length > 0 ? info.recipients.join(', ') : '(no recipients)'
+
+  // Render file list
+  const list = document.getElementById('file-list')!
+  list.innerHTML = ''
+  for (const att of info.attachments) {
+    const li = document.createElement('li')
+    li.className = 'file-item'
+    const nameSpan = document.createElement('span')
+    nameSpan.className = 'file-name'
+    nameSpan.textContent = att.name
+    const sizeSpan = document.createElement('span')
+    sizeSpan.className = 'file-size'
+    sizeSpan.textContent = formatSize(att.size)
+    li.appendChild(nameSpan)
+    li.appendChild(sizeSpan)
+    list.appendChild(li)
+  }
+
+  show('state-confirm')
+
+  // Client-side size guard so the user cannot start an upload that the API will
+  // reject. The background re-validates as a defence in depth.
+  const totalBytes = info.attachments.reduce((sum, a) => sum + a.size, 0)
+  if (maxShareSize != null && totalBytes > maxShareSize) {
+    showSizeOverLimit(totalBytes, maxShareSize)
   }
 }
 
@@ -142,17 +226,32 @@ async function confirmUpload(): Promise<void> {
   btnConfirm.disabled = true
   btnCancel.disabled = true
 
+  const usePassphraseEl = document.getElementById('use-passphrase') as HTMLInputElement
   const passphraseInput = document.getElementById('passphrase-input') as HTMLInputElement
-  const passphrase = passphraseInput.value.trim() || undefined
+  const expirySelect = document.getElementById('expiry-select') as HTMLSelectElement
+
+  const wantsPassphrase = usePassphraseEl.checked
+  const passphraseRaw = passphraseInput.value.trim()
   passphraseInput.value = '' // Clear from DOM immediately regardless of outcome
 
-  if (passphrase !== undefined && passphrase.length < 8) {
-    btnConfirm.disabled = false
-    btnCancel.disabled = false
-    show('state-confirm')
-    showPassphraseError('Passphrase must be at least 8 characters.')
-    passphraseInput.focus()
+  const expirySeconds = parseInt(expirySelect.value, 10)
+  // The select is always populated with valid presets, so this is purely defensive.
+  if (!Number.isFinite(expirySeconds) || expirySeconds <= 0) {
+    showError('Invalid expiry duration. Please reopen the dialog.')
     return
+  }
+
+  let passphrase: string | undefined
+  if (wantsPassphrase) {
+    if (passphraseRaw.length < 8) {
+      btnConfirm.disabled = false
+      btnCancel.disabled = false
+      show('state-confirm')
+      showPassphraseError('Passphrase must be at least 8 characters.')
+      passphraseInput.focus()
+      return
+    }
+    passphrase = passphraseRaw
   }
 
   show('state-uploading')
@@ -160,7 +259,7 @@ async function confirmUpload(): Promise<void> {
   try {
     const result = await send<{ ok: boolean; needsPassphrase?: boolean; needsReauth?: boolean; error?: string }>({
       type: 'CONFIRM_UPLOAD',
-      payload: { tabId, passphrase },
+      payload: { tabId, expirySeconds, passphrase },
     })
 
     if (!result.ok) {
@@ -173,6 +272,9 @@ async function confirmUpload(): Promise<void> {
         show('state-confirm')
         btnConfirm.disabled = false
         btnCancel.disabled = false
+        // Force the toggle on so the input is visible for retry.
+        usePassphraseEl.checked = true
+        togglePassphraseBlock()
         showPassphraseError(result.error ?? 'A passphrase is required.')
         passphraseInput.focus()
       } else if (result.error) {
@@ -186,14 +288,34 @@ async function confirmUpload(): Promise<void> {
 }
 
 function showPassphraseError(message: string): void {
-  let el = document.getElementById('passphrase-error')
-  if (!el) {
-    el = document.createElement('p')
-    el.id = 'passphrase-error'
-    el.className = 'passphrase-error-msg'
-    document.querySelector('.passphrase-block')?.appendChild(el)
-  }
+  const el = document.getElementById('passphrase-error')!
   el.textContent = message
+  el.classList.remove('hidden')
+  ;(document.getElementById('passphrase-input') as HTMLInputElement)
+    .setAttribute('aria-invalid', 'true')
+}
+
+function clearPassphraseError(): void {
+  const el = document.getElementById('passphrase-error')
+  if (!el) return
+  el.textContent = ''
+  el.classList.add('hidden')
+  ;(document.getElementById('passphrase-input') as HTMLInputElement)
+    .removeAttribute('aria-invalid')
+}
+
+function togglePassphraseBlock(): void {
+  const usePassphraseEl = document.getElementById('use-passphrase') as HTMLInputElement
+  const block = document.getElementById('passphrase-block')!
+  const input = document.getElementById('passphrase-input') as HTMLInputElement
+  if (usePassphraseEl.checked) {
+    block.classList.remove('hidden')
+    input.focus()
+  } else {
+    block.classList.add('hidden')
+    input.value = ''
+    clearPassphraseError()
+  }
 }
 
 async function cancelUpload(): Promise<void> {
@@ -211,9 +333,16 @@ document.getElementById('btn-open-settings')?.addEventListener('click', () => {
   void browser.runtime.openOptionsPage()
   void closeDialog()
 })
-document.getElementById('btn-toggle-pass')?.addEventListener('click', () => {
+document.getElementById('btn-toggle-pass')?.addEventListener('click', (e) => {
   const input = document.getElementById('passphrase-input') as HTMLInputElement
-  input.type = input.type === 'password' ? 'text' : 'password'
+  const btn = e.currentTarget as HTMLButtonElement
+  const showing = input.type === 'text'
+  // Flip state.
+  input.type = showing ? 'password' : 'text'
+  btn.setAttribute('aria-pressed', String(!showing))
+  btn.setAttribute('aria-label', showing ? 'Show passphrase' : 'Hide passphrase')
 })
+document.getElementById('use-passphrase')?.addEventListener('change', togglePassphraseBlock)
+document.getElementById('passphrase-input')?.addEventListener('input', clearPassphraseError)
 
 init().catch((err: unknown) => console.error('[Retyc] dialog init failed:', err))

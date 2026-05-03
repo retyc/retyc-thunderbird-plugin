@@ -47,8 +47,5 @@
     "notifications",
     "tabs",
     "https://api.retyc.com/*"
-  ],
-  "optional_permissions": [
-    "<all_urls>"
   ]
 }

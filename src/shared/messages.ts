@@ -7,6 +7,7 @@ export type MessageType =
   | 'SAVE_SETTINGS'
   | 'SET_ENABLED'
   | 'GET_COMPOSE_INFO'
+  | 'GET_UPLOAD_CAPABILITIES'
   | 'CONFIRM_UPLOAD'
   | 'CANCEL_UPLOAD'
   | 'UPLOAD_PROGRESS'
@@ -20,7 +21,6 @@ export interface UserInfo {
 
 export interface AuthStatusResponse {
   authenticated: boolean
-  expiresDays: number
   autoSend: boolean
   enabled: boolean
   userInfo?: UserInfo
@@ -45,7 +45,6 @@ export interface DeviceFlowResponse {
 }
 
 export interface SettingsPayload {
-  expiresDays: number
   autoSend: boolean
 }
 
@@ -55,8 +54,15 @@ export interface ComposeInfoResponse {
   recipients: string[]
 }
 
+export interface UploadCapabilitiesResponse {
+  // Both are nullable when the API does not advertise a limit.
+  maxShareExpirationTime: number | null  // seconds
+  maxShareSize: number | null            // bytes
+}
+
 export interface ConfirmUploadPayload {
   tabId: number
+  expirySeconds: number
   passphrase?: string
 }
 
