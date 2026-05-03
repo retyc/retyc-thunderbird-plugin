@@ -43,6 +43,17 @@ const pendingUploads = new Map<number, PendingUpload>()
 // the dialog itself, so existing installs would otherwise carry a dead value.
 browser.storage.local.remove('retyc_expires_days').catch(() => { /* best effort */ })
 
+// Red 'OFF' when disabled, Green 'ON' otherwise
+function updateComposeActionState(enabled: boolean): void {
+  const badgeText = enabled ? 'ON' : 'OFF'
+  const badgeColor = enabled ? '#16a34a' : '#dc2626'
+
+  browser.composeAction.setBadgeText({ text: badgeText }).catch(() => { /* best effort */ })
+  browser.composeAction.setBadgeBackgroundColor({ color: badgeColor }).catch(() => { /* best effort */ })
+}
+
+void getEnabled().then(updateComposeActionState)
+
 // --- Cleanup listeners ---
 
 // If the user closes the dialog, abort any in-progress upload and warn them.
@@ -515,6 +526,7 @@ async function handleGetUploadCapabilities(): Promise<UploadCapabilitiesResponse
 async function handleSetEnabled(payload: SetEnabledPayload): Promise<{ ok: boolean }> {
   try {
     await browser.storage.local.set({ [STORAGE_KEY_ENABLED]: payload.enabled })
+    updateComposeActionState(payload.enabled)
     return { ok: true }
   } catch (err) {
     console.error('[Retyc] Failed to set enabled flag:', err)
