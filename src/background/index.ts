@@ -447,7 +447,7 @@ async function appendRetycLink(
       'This transfer is end-to-end encrypted and will expire automatically.',
     ].join('\n')
     await browser.compose.setComposeDetails(tabId, {
-      plainTextBody: `${existing}\n\n${addition}`,
+      plainTextBody: insertBeforePlainTextSignature(existing, addition),
     })
   } else {
     const existing = details.body ?? ''
@@ -459,8 +459,59 @@ async function appendRetycLink(
   <a href="${safeUrl}" style="color:#1a3c6e">${safeUrl}</a><br>
   <small style="color:#888">This transfer is end-to-end encrypted and will expire automatically.</small>
 </p>`
-    await browser.compose.setComposeDetails(tabId, { body: existing + addition })
+    await browser.compose.setComposeDetails(tabId, {
+      body: insertBeforeHtmlSignature(existing, addition),
+    })
   }
+}
+
+// Insert before the LAST RFC 3676 signature delimiter ("-- " on its own line).
+// Last-match avoids landing inside an inline-forwarded message that contains
+// the original sender's "-- " separator earlier in the body.
+function insertBeforePlainTextSignature(body: string, addition: string): string {
+  const re = /(^|\n)-- \r?\n/g
+  let lastMatch: RegExpExecArray | null = null
+  let m: RegExpExecArray | null
+  while ((m = re.exec(body)) !== null) lastMatch = m
+  if (lastMatch) {
+    const sigStart = lastMatch.index + lastMatch[1].length
+    return `${body.slice(0, sigStart)}${addition}\n\n${body.slice(sigStart)}`
+  }
+  return `${body}\n\n${addition}`
+}
+
+// Anchor selectors used by Thunderbird itself (cf. cloudAttachmentLinkManager.js)
+// to position content inside a compose document. Stable across TB 115 → 128+.
+const COMPOSE_ANCHOR_SELECTORS = [
+  '.moz-signature',
+  '.moz-cite-prefix',
+  '.moz-forward-container',
+] as const
+
+// Parse the compose body, find the first anchor (signature, reply quote prefix,
+// or forward container) in document order, and insert the Retyc block above it.
+// Falls back to plain append if none are present.
+function insertBeforeHtmlSignature(body: string, addition: string): string {
+  const doc = new DOMParser().parseFromString(body, 'text/html')
+  const anchor = findFirstAnchor(doc)
+  if (!anchor?.parentNode) {
+    return body + addition
+  }
+  const fragment = doc.createElement('template')
+  fragment.innerHTML = addition
+  anchor.parentNode.insertBefore(fragment.content, anchor)
+  return doc.documentElement.outerHTML
+}
+
+function findFirstAnchor(doc: Document): Element | null {
+  const found = COMPOSE_ANCHOR_SELECTORS
+    .map((sel) => doc.querySelector(sel))
+    .filter((el): el is Element => el !== null)
+  if (found.length === 0) return null
+  return found.reduce((earliest, el) => {
+    const pos = earliest.compareDocumentPosition(el)
+    return (pos & Node.DOCUMENT_POSITION_PRECEDING) !== 0 ? el : earliest
+  })
 }
 
 
