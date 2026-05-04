@@ -1,9 +1,11 @@
 import { getSDK, invalidateSDK } from './sdk-factory'
+import { BrowserStorageTokenStore } from './token-store'
 import {
   DEFAULT_AUTO_SEND,
   DEFAULT_ENABLED,
   STORAGE_KEY_AUTO_SEND,
   STORAGE_KEY_ENABLED,
+  STORAGE_KEY_TOKENS,
 } from '../shared/constants'
 import type {
   Message,
@@ -44,16 +46,34 @@ const pendingUploads = new Map<number, PendingUpload>()
 // the dialog itself, so existing installs would otherwise carry a dead value.
 browser.storage.local.remove('retyc_expires_days').catch(() => { /* best effort */ })
 
-// Red 'OFF' when disabled, Green 'ON' otherwise
-function updateComposeActionState(enabled: boolean): void {
-  const badgeText = enabled ? 'ON' : 'OFF'
-  const badgeColor = enabled ? '#16a34a' : '#dc2626'
+// Badge is "ON" only when both the kill switch is on AND the user is authenticated:
+// onBeforeSend lets logged-out sends through, so "ON" without auth would mislead.
+// Auth state is read from the token store directly to avoid an OIDC preload on startup
+// and to keep the badge accurate when launching offline.
+const _badgeTokenStore = new BrowserStorageTokenStore()
+
+async function refreshComposeActionState(): Promise<void> {
+  const [enabled, tokens] = await Promise.all([
+    getEnabled(),
+    _badgeTokenStore.get().catch(() => null),
+  ])
+  const active = enabled && tokens != null
+  const badgeText = active ? 'ON' : 'OFF'
+  const badgeColor = active ? '#16a34a' : '#dc2626'
 
   browser.composeAction.setBadgeText({ text: badgeText }).catch(() => { /* best effort */ })
   browser.composeAction.setBadgeBackgroundColor({ color: badgeColor }).catch(() => { /* best effort */ })
 }
 
-void getEnabled().then(updateComposeActionState)
+void refreshComposeActionState()
+
+// SDK writes/clears `retyc_tokens` on login and logout, so this catches device-flow completion too.
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return
+  if (STORAGE_KEY_TOKENS in changes || STORAGE_KEY_ENABLED in changes) {
+    void refreshComposeActionState()
+  }
+})
 
 // --- Cleanup listeners ---
 
@@ -543,7 +563,6 @@ async function handleGetUploadCapabilities(): Promise<UploadCapabilitiesResponse
 async function handleSetEnabled(payload: SetEnabledPayload): Promise<{ ok: boolean }> {
   try {
     await browser.storage.local.set({ [STORAGE_KEY_ENABLED]: payload.enabled })
-    updateComposeActionState(payload.enabled)
     return { ok: true }
   } catch (err) {
     console.error('[Retyc] Failed to set enabled flag:', err)
