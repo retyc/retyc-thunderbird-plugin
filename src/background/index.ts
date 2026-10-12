@@ -1,3 +1,4 @@
+import './polyfills'
 import { getSDK, invalidateSDK } from './sdk-factory'
 import { BrowserStorageTokenStore } from './token-store'
 import {
@@ -208,7 +209,7 @@ browser.compose.onBeforeSend.addListener(
 
     try {
       const win = await browser.windows.create({
-        url: browser.runtime.getURL(`dialog.html?tabId=${tabId}`),
+        url: browser.runtime.getURL(`dialog/dialog.html?tabId=${tabId}`),
         type: 'popup',
         width: 700,
         height: 600,

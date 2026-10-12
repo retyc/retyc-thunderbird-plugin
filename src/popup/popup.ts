@@ -1,4 +1,3 @@
-import '../shared/common.css'
 import './popup.css'
 import type { Message, AuthStatusResponse, DeviceFlowResponse, RefreshTokenResponse } from '../shared/messages'
 

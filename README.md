@@ -106,7 +106,7 @@ To target a local backend, set `RETYC_API_URL` before building:
 RETYC_API_URL=http://localhost:8000 npm run build:dev
 ```
 
-The correct host permission is automatically written into `dist/manifest.json` by the webpack build.
+The correct host permission is automatically written into `dist/manifest.json` by the Vite build.
 
 ### Project structure
 
@@ -120,7 +120,7 @@ src/
   shared/         # Shared types and constants
   types/          # Thunderbird MailExtension type declarations
 assets/icons/     # Extension icons
-dist/             # Webpack build output (gitignored)
+dist/             # Vite build output (gitignored)
 ```
 
 ### Architecture
@@ -152,10 +152,10 @@ User clicks Send
 GitHub Actions runs on every push and pull request:
 
 - Type-check (`tsc --noEmit`)
-- Production build (`webpack --mode production`)
+- Production build (`vite build`)
 - Lint
 - Manifest validation (`web-ext lint`)
-- Node 18, 20 and 22 matrix
+- Node 24
 
 On release, a `.xpi` package is built from the CI artifact and attached to the GitHub release.
 
@@ -175,7 +175,7 @@ npm run package
 # → artifacts/retyc-thunderbird-plugin-X.Y.Z.xpi
 ```
 
-`npm run package` runs a production webpack build then calls `web-ext build`, which produces a `.xpi` directly (a `.xpi` is a renamed `.zip` — both formats are valid for Thunderbird).
+`npm run package` runs a production Vite build then calls `web-ext build`, which produces a `.xpi` directly (a `.xpi` is a renamed `.zip` — both formats are valid for Thunderbird).
 
 To test the packaged extension before releasing:
 

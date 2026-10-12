@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Retyc",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Send large files securely with end-to-end encryption via Retyc",
   "browser_specific_settings": {
     "gecko": {
@@ -15,7 +15,7 @@
     "128": "assets/icons/icon-128.png"
   },
   "background": {
-    "scripts": ["dist/background.js"],
+    "page": "dist/background/background.html",
     "persistent": true
   },
   "compose_action": {
@@ -24,7 +24,7 @@
       "16": "assets/icons/icon-16.png",
       "48": "assets/icons/icon-48.png"
     },
-    "default_popup": "dist/compose-popup.html"
+    "default_popup": "dist/compose-popup/compose-popup.html"
   },
   "browser_action": {
     "default_title": "Retyc",
@@ -32,10 +32,10 @@
       "16": "assets/icons/icon-16.png",
       "48": "assets/icons/icon-48.png"
     },
-    "default_popup": "dist/popup.html"
+    "default_popup": "dist/popup/popup.html"
   },
   "options_ui": {
-    "page": "dist/options.html",
+    "page": "dist/options/options.html",
     "browser_style": false
   },
   "content_security_policy": "script-src 'self'; object-src 'none'",

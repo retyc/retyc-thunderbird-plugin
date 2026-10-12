@@ -30,7 +30,7 @@ required at upload time.
   (`retyc_enabled`), and shortcut to settings.
 - **Options** (`src/options/`): settings page exposing only the auto-send
   toggle (and login/logout). The API URL is hard-coded at build time via
-  `__RETYC_API_URL__` (see `webpack.config.js`); the app URL comes from the
+  `__RETYC_API_URL__` (see `vite.config.mts`); the app URL comes from the
   API response. Per-transfer expiry is picked from the dialog itself
   (default 7 days).
 
@@ -75,6 +75,11 @@ User clicks Send
 - `sdk.transfers.upload()` is the upload entry point (not `shares`).
 - `expires` is in **seconds** (multiply days by 86400).
 
+- The SDK's browser build (1.1.0) still calls the global `Buffer` during
+  uploads. `src/background/polyfills.ts` exposes it from the `buffer`
+  package and must stay the first import of `src/background/index.ts`.
+  Without it, uploads fail with `Buffer is not defined`.
+
 ### onBeforeSend bypass mechanism
 - After uploading, we call `compose.sendMessage` which re-fires
   `onBeforeSend`. The `bypassTabs: Set<number>` lets that one through.
@@ -98,7 +103,7 @@ User clicks Send
 ## Commands
 
 ```bash
-npm run build:dev    # webpack dev build (with cheap-module-source-map)
+npm run build:dev    # Vite dev build (unminified, with source maps)
 npm run build        # production build
 npm run watch        # rebuild on file changes
 npm run typecheck    # tsc --noEmit
@@ -111,14 +116,23 @@ npm run package      # build + create .xpi in artifacts/
 - **Thunderbird 115 (ESR) minimum**. `compose.getAttachmentFile` was
   added in TB 98, so the plugin cannot run on older versions. 115 is the
   current ESR baseline and matches what AMO/ATN expects.
-- **Node 18+** is supported (CI matrix: 18, 20, 22).
+- **Node 24+** is required (`engines` in `package.json`, CI runs on 24).
 - **ESLint 10's `stylish` formatter crashes on Node 18** (uses
   `util.styleText` which is Node 22+). Use `--format=compact`. The
   `eslint-formatter-compact` package is a devDep.
 - **`eslint.config.mjs`** (not `.js`) — ESLint 10 loads `.js` files as
   CommonJS by default.
-- Webpack uses `cheap-module-source-map` in dev (not the default
-  `eval-source-map`) because the extension CSP blocks `eval`.
+- Vite is only used through `vite build` (never the dev server): the
+  extension is loaded from `dist/`. Dev builds emit external source maps,
+  never `eval`-based ones, because the extension CSP blocks `eval`.
+- Every entry point is an HTML page under `src/<name>/<name>.html` that
+  loads its script with `<script type="module">`, including the background
+  (`src/background/background.html`, declared as `background.page` in the
+  manifest). Output keeps that layout: `dist/<name>/<name>.html`, with
+  hashed JS/CSS in `dist/assets/`.
+- Page CSS files `@import '../shared/common.css'` themselves; don't import
+  `common.css` from TypeScript, or Vite hoists it into a shared chunk that
+  loads after the page stylesheet and breaks the cascade.
 
 ## Storage layout (browser.storage.local)
 
