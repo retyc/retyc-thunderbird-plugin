@@ -1,6 +1,6 @@
 {
   "name": "retyc-thunderbird-plugin",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "private": true,
   "description": "Thunderbird extension for Retyc — secure, end-to-end encrypted file transfers",
   "author": "TripleStack SAS",
@@ -25,9 +25,9 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "webpack --mode production",
-    "build:dev": "webpack --mode development",
-    "watch": "webpack --mode development --watch",
+    "build": "vite build",
+    "build:dev": "vite build --mode development",
+    "watch": "vite build --mode development --watch",
     "lint": "eslint src --format=compact",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist artifacts",
@@ -35,25 +35,20 @@
     "package:xpi": "web-ext build --source-dir=dist --artifacts-dir=artifacts --filename retyc-thunderbird-plugin-{version}.xpi"
   },
   "dependencies": {
-    "@retyc/sdk": "^1.0.3"
+    "@retyc/sdk": "^1.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/firefox-webext-browser": "^143.0.0",
+    "@types/firefox-webext-browser": "^143.0.1",
     "buffer": "^6.0.3",
-    "css-loader": "^7.0.0",
-    "eslint": "^10.2.1",
+    "eslint": "^10.12.0",
     "eslint-formatter-compact": "^9.0.1",
-    "html-webpack-plugin": "^5.6.0",
-    "mini-css-extract-plugin": "^2.9.0",
-    "path-browserify": "^1.0.1",
-    "process": "^0.11.10",
-    "stream-browserify": "^3.0.0",
-    "ts-loader": "^9.5.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.0",
-    "web-ext": "^10.1.0",
-    "webpack": "^5.95.0",
-    "webpack-cli": "^7.0.2"
+    "typescript-eslint": "^8.71.1",
+    "vite": "^8.3.4",
+    "web-ext": "^10.7.0"
+  },
+  "overrides": {
+    "shell-quote": "^1.12.0"
   }
 }
